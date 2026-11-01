@@ -1,0 +1,585 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   Look and feel: a dark-first, squared-off interface with a light twin.
+   Near-black and warm-white surfaces with hairline borders, Ember (a burnt
+   orange-red) for actions, Amber for small highlights, Outfit for headings,
+   Inter for text and JetBrains Mono for small-caps labels.
+
+   Light or dark is chosen by `data-theme` on <html> (set before first paint
+   by the script in layout.tsx, and switched by ThemeToggle in nav.tsx). It
+   follows the device until someone picks one.
+
+   The `indigo` colour name is kept but now holds the Ember scale, so every
+   `indigo-*` class in the app is the primary colour, and `neutral` holds
+   warm greys. Pages are built from the classes in the "components" layer
+   below, so a change here carries across the whole app.
+   ------------------------------------------------------------------------ */
+
+/* `dark:` follows the data-theme attribute rather than the device setting. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+:root {
+  color-scheme: light;
+  --background: #f5f4f1;
+  --foreground: #17171a;
+  /* Cards and panels. */
+  --surface: #ffffff;
+  /* Things that float above the page: menus, sheets, a row being dragged. */
+  --surface-raised: #ffffff;
+  /* The sidebar and phone bars. */
+  --chrome: #edece8;
+  /* Hairlines. */
+  --line: rgb(23 23 26 / 0.1);
+  --accent: #a8471f; /* Ember, as text on a light surface (darker than the button colour so links read well) */
+  --amber: #e8b04a;
+  /* The glow behind the page. */
+  --glow-a: rgb(214 98 59 / 0.13);
+  --glow-b: rgb(232 176 74 / 0.12);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #121314;
+  --foreground: #ecebe8;
+  --surface: #1a1b1d;
+  --surface-raised: #242527;
+  --chrome: #0e0f10;
+  --line: rgb(255 255 255 / 0.09);
+  --accent: #f0a35e;
+  --glow-a: rgb(214 98 59 / 0.3);
+  --glow-b: rgb(232 176 74 / 0.14);
+}
+
+/* Colour themes (src/lib/palettes.ts), picked on the Account page and set as `data-palette`
+   on <html>. Ember, above, is the default. Each swaps the primary scale, link and highlight
+   colours and the page surfaces, for light and for dark. Generated with every button's white
+   text and every link at 4.5:1 contrast or better. */
+:root[data-palette="clay"] {
+  --color-indigo-50: #f3f4f5;
+  --color-indigo-100: #e7eaeb;
+  --color-indigo-200: #cfd4d6;
+  --color-indigo-300: #b4bcbf;
+  --color-indigo-400: #96a1a5;
+  --color-indigo-500: #7e8c91;
+  --color-indigo-600: #69797f;
+  --color-indigo-700: #566368;
+  --color-indigo-800: #455054;
+  --color-indigo-900: #343c40;
+  --color-indigo-950: #24292b;
+  --background: #f4f0e5;
+  --foreground: #313131;
+  --surface: #fcfaf5;
+  --surface-raised: #ffffff;
+  --chrome: #eeece9;
+  --accent: #8a6658;
+  --amber: #bab9a7;
+  --glow-a: rgb(126 140 145 / 0.13);
+  --glow-b: rgb(186 185 167 / 0.12);
+}
+:root[data-palette="clay"][data-theme="dark"] {
+  --background: #1e1e1c;
+  --foreground: #eeece9;
+  --surface: #282826;
+  --surface-raised: #313131;
+  --chrome: #191918;
+  --accent: #c9a08e;
+  --glow-a: rgb(126 140 145 / 0.3);
+  --glow-b: rgb(186 185 167 / 0.14);
+}
+
+:root[data-palette="olive"] {
+  --color-indigo-50: #f2f3ef;
+  --color-indigo-100: #e5e7df;
+  --color-indigo-200: #cacfbf;
+  --color-indigo-300: #acb49c;
+  --color-indigo-400: #8c9774;
+  --color-indigo-500: #717f54;
+  --color-indigo-600: #5a6a38;
+  --color-indigo-700: #4a572e;
+  --color-indigo-800: #3b4625;
+  --color-indigo-900: #2d351c;
+  --color-indigo-950: #1f2413;
+  --background: #f2f0e8;
+  --foreground: #1d1f17;
+  --surface: #fbfaf5;
+  --surface-raised: #ffffff;
+  --chrome: #e9e6dc;
+  --accent: #55642f;
+  --amber: #c9a46a;
+  --glow-a: rgb(113 127 84 / 0.13);
+  --glow-b: rgb(201 164 106 / 0.12);
+}
+:root[data-palette="olive"][data-theme="dark"] {
+  --background: #141512;
+  --foreground: #ecebe4;
+  --surface: #1c1d19;
+  --surface-raised: #262722;
+  --chrome: #10110e;
+  --accent: #b8c48c;
+  --glow-a: rgb(113 127 84 / 0.3);
+  --glow-b: rgb(201 164 106 / 0.14);
+}
+
+:root[data-palette="rose"] {
+  --color-indigo-50: #f8f2f1;
+  --color-indigo-100: #f0e4e2;
+  --color-indigo-200: #e2cac5;
+  --color-indigo-300: #d1aca4;
+  --color-indigo-400: #bf8a80;
+  --color-indigo-500: #b06f63;
+  --color-indigo-600: #a3584a;
+  --color-indigo-700: #86483d;
+  --color-indigo-800: #6c3a31;
+  --color-indigo-900: #522c25;
+  --color-indigo-950: #371e19;
+  --background: #f6f0ec;
+  --foreground: #211816;
+  --surface: #fffcfa;
+  --surface-raised: #ffffff;
+  --chrome: #efe6e1;
+  --accent: #94493b;
+  --amber: #e2b48a;
+  --glow-a: rgb(176 111 99 / 0.13);
+  --glow-b: rgb(226 180 138 / 0.12);
+}
+:root[data-palette="rose"][data-theme="dark"] {
+  --background: #171312;
+  --foreground: #f0e8e5;
+  --surface: #201b1a;
+  --surface-raised: #2a2422;
+  --chrome: #120f0e;
+  --accent: #e6a595;
+  --glow-a: rgb(176 111 99 / 0.3);
+  --glow-b: rgb(226 180 138 / 0.14);
+}
+
+:root[data-palette="water"] {
+  --color-indigo-50: #eef2f4;
+  --color-indigo-100: #dee5ea;
+  --color-indigo-200: #bccbd4;
+  --color-indigo-300: #96adbc;
+  --color-indigo-400: #6d8ca2;
+  --color-indigo-500: #4b728d;
+  --color-indigo-600: #2e5b7a;
+  --color-indigo-700: #264b64;
+  --color-indigo-800: #1e3c51;
+  --color-indigo-900: #172e3d;
+  --color-indigo-950: #101f29;
+  --background: #f1f4f6;
+  --foreground: #151a1e;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --chrome: #e6ebef;
+  --accent: #295470;
+  --amber: #e0b860;
+  --glow-a: rgb(75 114 141 / 0.13);
+  --glow-b: rgb(224 184 96 / 0.12);
+}
+:root[data-palette="water"][data-theme="dark"] {
+  --background: #0f1316;
+  --foreground: #e8edf0;
+  --surface: #161c20;
+  --surface-raised: #1f272c;
+  --chrome: #0b0e10;
+  --accent: #8fc2e2;
+  --glow-a: rgb(75 114 141 / 0.3);
+  --glow-b: rgb(224 184 96 / 0.14);
+}
+
+:root[data-palette="dusk"] {
+  --color-indigo-50: #f3f1f5;
+  --color-indigo-100: #e8e2ea;
+  --color-indigo-200: #d0c5d5;
+  --color-indigo-300: #b6a4be;
+  --color-indigo-400: #9980a4;
+  --color-indigo-500: #81638f;
+  --color-indigo-600: #6d4a7d;
+  --color-indigo-700: #593d66;
+  --color-indigo-800: #483152;
+  --color-indigo-900: #36253e;
+  --color-indigo-950: #25192a;
+  --background: #f5f3f6;
+  --foreground: #1c1720;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --chrome: #ebe7ee;
+  --accent: #664376;
+  --amber: #e6b980;
+  --glow-a: rgb(129 99 143 / 0.13);
+  --glow-b: rgb(230 185 128 / 0.12);
+}
+:root[data-palette="dusk"][data-theme="dark"] {
+  --background: #141216;
+  --foreground: #eee9f1;
+  --surface: #1c1920;
+  --surface-raised: #26222b;
+  --chrome: #0f0d11;
+  --accent: #cfa9de;
+  --glow-a: rgb(129 99 143 / 0.3);
+  --glow-b: rgb(230 185 128 / 0.14);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-chrome: var(--chrome);
+  --color-line: var(--line);
+  --color-clay: var(--accent);
+  --color-sage: var(--amber);
+  --font-sans: var(--font-inter);
+  --font-heading: var(--font-outfit);
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+}
+
+@theme {
+  /* Squarer corners everywhere the app says rounded-md ... rounded-2xl. */
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
+  --radius-xl: 6px;
+  --radius-2xl: 8px;
+
+  /* Ember, the primary colour, under the name the app already uses. 600 is the button colour. */
+  --color-indigo-50: #fdf3ee;
+  --color-indigo-100: #fbe3d8;
+  --color-indigo-200: #f6c5b0;
+  --color-indigo-300: #ee9f80;
+  --color-indigo-400: #e57a55;
+  --color-indigo-500: #d4623b;
+  --color-indigo-600: #b9502d;
+  --color-indigo-700: #983f23;
+  --color-indigo-800: #7a331e;
+  --color-indigo-900: #5c2819;
+  --color-indigo-950: #3a170d;
+
+  /* Warm greys. 500 is the lightest that still reads on a light surface (4.5:1 or better). */
+  --color-neutral-50: #f7f7f5;
+  --color-neutral-100: #eeeeeb;
+  --color-neutral-200: #e1e1dd;
+  --color-neutral-300: #c9c9c3;
+  --color-neutral-400: #a3a39c;
+  --color-neutral-500: #66665f;
+  --color-neutral-600: #51514c;
+  --color-neutral-700: #3d3d39;
+  --color-neutral-800: #2a2a27;
+  --color-neutral-900: #1c1c1a;
+  --color-neutral-950: #121211;
+}
+
+/* The page's own scrollbar is not drawn (the page still scrolls with the wheel, touch, keys and
+   dragging). A scrollbar that appears for the moment a page is a little taller than the window,
+   as the page-in animation makes it, would otherwise flash in and shift everything sideways. */
+html {
+  scrollbar-width: none;
+}
+html::-webkit-scrollbar {
+  display: none;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-inter), Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* The glow in the top corner: an ember blob and an amber one, drifting and breathing at different
+   paces so it never settles into a pattern. They sit behind everything (z-index -1, above the
+   page colour), are only moved and faded with transforms so the animation stays on the GPU, and
+   can't be clicked. */
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  z-index: -1;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+body::before {
+  top: -462px;
+  left: calc(78vw - 770px);
+  width: 1540px;
+  height: 644px;
+  background: radial-gradient(closest-side, var(--glow-a), transparent 100%);
+  animation: glow-ember 24s ease-in-out infinite alternate;
+}
+body::after {
+  top: -326px;
+  left: calc(105vw - 560px);
+  width: 1120px;
+  height: 532px;
+  background: radial-gradient(closest-side, var(--glow-b), transparent 100%);
+  animation: glow-amber 31s ease-in-out infinite alternate;
+}
+@keyframes glow-ember {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.85;
+  }
+  50% {
+    transform: translate3d(-9vw, 70px, 0) scale(1.18);
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(-3vw, 26px, 0) scale(0.94);
+    opacity: 0.8;
+  }
+}
+@keyframes glow-amber {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: translate3d(-14vw, 40px, 0) scale(1.25);
+    opacity: 0.7;
+  }
+  100% {
+    transform: translate3d(-6vw, 90px, 0) scale(1.05);
+    opacity: 0.95;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  body::before,
+  body::after {
+    animation: none;
+  }
+}
+/* A page inside a merged screen sits still; the outer page carries the motion. */
+html[data-embedded] body::before,
+html[data-embedded] body::after {
+  animation: none;
+}
+
+/* Headings in Outfit. Outside any layer so it wins over a heading's own weight class.
+   A small all-caps heading is a subheading and is left alone. */
+h1:not(.uppercase),
+h2:not(.uppercase):not(.panel-head):not(.eyebrow),
+.font-heading {
+  font-family: var(--font-outfit), system-ui, sans-serif;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+}
+
+@layer base {
+  /* Anything reached with the keyboard that has no ring of its own (checkboxes,
+     plain links, the drag handles) gets this one. */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
+::selection {
+  background: rgb(214 98 59 / 0.3);
+}
+
+/* A person's row on a merged screen is picked up as a whole. Its links and text must not start a
+   drag of their own (a link drags as a URL) or select, or the press becomes a text selection. */
+.person-drag {
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.person-drag:active {
+  cursor: grabbing;
+}
+.person-drag a,
+.person-drag img {
+  -webkit-user-drag: none;
+}
+
+/* Dropdowns: the browser's own arrow and list are drawn to match the fields. */
+select.input {
+  appearance: none;
+  padding-right: 2.25rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2366665f' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.7rem center;
+  background-size: 1rem;
+  cursor: pointer;
+}
+:root[data-theme="dark"] select.input {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a3a39c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+select.input option {
+  background-color: var(--surface-raised);
+  color: var(--foreground);
+}
+
+@layer components {
+  /* A panel of related content. */
+  .card {
+    @apply rounded-xl border border-line bg-surface p-5 sm:p-6;
+  }
+  /* A card with a title bar (.panel-head) over its content (.panel-body),
+     for pages that stack several big sections, such as a plan. */
+  .panel {
+    @apply overflow-hidden rounded-xl border border-line bg-surface;
+  }
+  .panel-head {
+    @apply flex items-center gap-2.5 border-b border-line bg-black/[0.025] px-5 py-3 font-mono text-xs font-medium uppercase tracking-[0.12em] text-neutral-600 before:h-2 before:w-2 before:bg-indigo-500 sm:px-6 dark:bg-white/[0.03] dark:text-neutral-300;
+  }
+  .panel-body {
+    @apply p-5 sm:p-6;
+  }
+  /* A panel that is a list of rows; put .list-row on each row. */
+  .list {
+    @apply divide-y divide-[var(--line)] overflow-hidden rounded-xl border border-line bg-surface;
+  }
+  .list-row {
+    @apply flex items-center gap-3.5 px-4 py-3 transition-colors hover:bg-black/[0.03] sm:px-5 dark:hover:bg-white/[0.04];
+  }
+  .label {
+    @apply mb-1.5 block text-sm font-medium text-neutral-700 dark:text-neutral-300;
+  }
+  /* 16px text on phones keeps iOS from zooming the page when a field is focused. */
+  .input {
+    @apply w-full rounded-lg border border-black/20 bg-surface-raised px-3 py-2 text-base outline-none transition placeholder:text-neutral-400 focus:border-indigo-600 focus:ring-[3px] focus:ring-indigo-500/35 sm:text-sm dark:border-white/15 dark:bg-white/[0.04] dark:placeholder:text-neutral-500 dark:focus:border-indigo-300 dark:focus:ring-indigo-400/40;
+  }
+  .btn {
+    @apply inline-flex min-h-10 cursor-pointer select-none items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100;
+  }
+  .btn-primary {
+    @apply bg-indigo-600 text-white hover:bg-indigo-700 dark:hover:bg-indigo-500;
+  }
+  .btn-secondary {
+    @apply border border-black/15 bg-surface-raised text-neutral-800 hover:bg-neutral-100 dark:border-white/12 dark:bg-white/[0.05] dark:text-neutral-100 dark:hover:bg-white/[0.1];
+  }
+  .btn-danger {
+    @apply border border-red-600/30 text-red-700 hover:bg-red-50 dark:border-red-400/30 dark:text-red-400 dark:hover:bg-red-950/40;
+  }
+  /* A square button that is only an icon. Always give it an aria-label. */
+  .icon-btn {
+    @apply inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg text-neutral-500 transition hover:bg-black/[0.06] hover:text-neutral-900 focus-visible:outline-2 focus-visible:outline-indigo-500 disabled:cursor-not-allowed disabled:opacity-40 dark:text-neutral-400 dark:hover:bg-white/10 dark:hover:text-white;
+  }
+  /* The same, tinted: the things you press to do something with a song. */
+  .icon-btn-accent {
+    @apply inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg bg-indigo-50 text-indigo-700 transition hover:bg-indigo-600 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 dark:bg-indigo-400/15 dark:text-indigo-300 dark:hover:bg-indigo-500 dark:hover:text-white;
+  }
+  .badge {
+    @apply inline-flex items-center rounded-md border border-line bg-neutral-100 px-1.5 py-0.5 text-xs font-medium text-neutral-700 dark:bg-white/[0.07] dark:text-neutral-300;
+  }
+  /* A musical key: the one badge people scan for, so it gets the amber highlight. */
+  .badge-key {
+    @apply inline-flex min-w-6 items-center justify-center rounded-md border border-amber-500/40 bg-amber-400/20 px-1.5 py-0.5 font-mono text-xs font-bold text-amber-900 dark:border-amber-400/30 dark:bg-amber-400/15 dark:text-amber-300;
+  }
+  /* Marks a song played as its tag in a plan: the theme's bright highlight, so it stands out from the key badge's tint. */
+  .badge-tag {
+    @apply inline-flex shrink-0 items-center rounded bg-sage px-1.5 py-[3px] font-heading text-[11px] font-black leading-none tracking-[0.08em] text-neutral-950;
+  }
+  .muted {
+    @apply text-neutral-500 dark:text-neutral-400;
+  }
+  /* Links take the accent colour. */
+  .link {
+    @apply font-medium text-clay underline decoration-clay/40 underline-offset-2 hover:decoration-clay;
+  }
+  /* A small all-caps label in mono with a little letter spacing. */
+  .eyebrow {
+    @apply font-mono text-xs font-medium uppercase tracking-[0.1em] text-neutral-500 dark:text-neutral-400;
+  }
+  /* A friendly "nothing here yet" panel. */
+  .empty {
+    @apply rounded-xl border border-dashed border-black/20 px-5 py-8 text-center text-sm text-neutral-500 dark:border-white/15 dark:text-neutral-400;
+  }
+}
+
+/* A page shown inside a merged screen: the outer page has the navigation, so drop the sidebar, the
+   phone bars and the room left for them. */
+html[data-embedded] .app-chrome {
+  display: none !important;
+}
+html[data-embedded] main {
+  padding-bottom: 0 !important;
+}
+
+/* A page arriving: a short fade and rise. Backwards fill (not both) so nothing keeps a transform
+   afterwards, which would trap position:fixed children such as the floating "+" button. */
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.page-enter {
+  animation: page-in 320ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-enter {
+    animation: none;
+  }
+}
+
+/* Chord charts, on screen and in the editor: a plain typewriter face where
+   every character (bold included) is the same width, so chords, lyrics and
+   guitar tab stay in the columns they were typed in. */
+.chart-font {
+  font-family: "Courier New", Courier, monospace;
+}
+
+/* A chord chart page is a whole Letter sheet that carries its own margins,
+   title band and page number (see src/lib/chart-pages.ts), so the browser
+   adds none of its own. */
+@page chart {
+  size: letter;
+  margin: 0;
+}
+
+.chart-page {
+  page: chart;
+  break-after: page;
+  break-inside: avoid;
+}
+
+.chart-page:last-child {
+  break-after: auto;
+}
+
+/* A whole service's printout is several sets of sheets; each sheet starts a new page
+   and the order sheet comes first, so nothing leaves a blank page at the end. */
+.service-print .chart-page {
+  break-after: auto;
+  break-before: page;
+}
+
+.service-print .chart-page.first-sheet {
+  break-before: auto;
+}
+
+@media print {
+  .page-enter {
+    animation: none;
+  }
+  :root,
+  :root[data-theme="dark"] {
+    --background: #ffffff;
+    --foreground: #000000;
+  }
+  body::before,
+  body::after {
+    display: none;
+  }
+  .card {
+    border: 0;
+    background: transparent;
+    padding: 0;
+    box-shadow: none;
+  }
+  /* Keep the grey band behind the song title when printing. */
+  .sheet-header,
+  .chart-page {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

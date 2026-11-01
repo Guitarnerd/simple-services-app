@@ -1,0 +1,533 @@
+// Prisma schema for Simple Services
+// Learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  PLANNER
+  LEADER
+  MEMBER
+}
+
+enum PlanItemType {
+  SONG
+  ITEM
+  HEADER
+}
+
+enum AttachmentKind {
+  FILE
+  LINK
+}
+
+enum AssignmentStatus {
+  PENDING
+  CONFIRMED
+  DECLINED
+}
+
+enum TokenType {
+  INVITE
+  RESET
+}
+
+// One row: each church runs its own copy. Top-level tables carry organizationId
+// so more churches can be added later without reshaping the data.
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  timezone  String   @default("America/Chicago")
+  // The church's CCLI licence number, shown on the CCLI report.
+  ccliLicense String?
+  createdAt DateTime @default(now())
+  // When the church's own logo (ChurchLogo) last changed; null when it has none.
+  // Pages read this, not the image, and use it to bust the browser's cache.
+  logoUpdatedAt DateTime?
+  logo         ChurchLogo?
+  people       Person[]
+  teams        Team[]
+  serviceTypes ServiceType[]
+  plans        Plan[]
+  songs        Song[]
+  attachments  Attachment[]
+  autoScheduleRuns AutoScheduleRun[]
+}
+
+// The church's logo, shown at the top of the sidebar and the phone header. Kept apart
+// from Organization so the image is only read by the /logo route.
+model ChurchLogo {
+  organizationId String       @id
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  data           Bytes
+  contentType    String
+}
+
+// A person in the directory. They can sign in once passwordHash is set;
+// people without a login (or without an email) still live in the directory.
+model Person {
+  id             String       @id @default(cuid())
+  // This row's id in Planning Center, when it was imported from there.
+  pcoId          String?
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  firstName      String
+  lastName       String
+  email          String?      @unique
+  role           Role         @default(MEMBER)
+  passwordHash   String?
+  birthday       DateTime?    @db.Date
+  street         String?
+  city           String?
+  state          String?
+  postalCode     String?
+  notes          String?
+  // Serving preferences, which auto-schedule keeps to. The most days a month (null
+  // for no limit), and the weeks of the month, 1 to 5 (empty for any).
+  maxPerMonth    Int?
+  preferredWeeks Int[]        @default([])
+  archived       Boolean      @default(false)
+  // Test material, cleared in one go from the Account page (Sample data).
+  sample         Boolean      @default(false)
+  invitedAt      DateTime?
+  lastLoginAt    DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  phones         Phone[]
+  positions      PersonPosition[]
+  leading        TeamLeader[]
+  tokens         AuthToken[]
+  assignments    Assignment[]
+  blackouts      Blackout[]
+  partnersA      ServingPartner[] @relation("partnerA")
+  partnersB      ServingPartner[] @relation("partnerB")
+  apiTokens      ApiToken[]
+  oauthCodes     OAuthCode[]
+
+  @@index([organizationId, lastName, firstName])
+}
+
+// A Claude connection: lets Claude act in the app as this person, with their
+// permissions. Only a hash of the token is kept; `hint` is its last 4 characters.
+model ApiToken {
+  id         String    @id @default(cuid())
+  personId   String
+  person     Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
+  name       String
+  tokenHash  String    @unique
+  hint       String
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+  // Set for a connection made through OAuth (claude.ai, the Claude phone app):
+  // its access token expires and is renewed with the refresh token.
+  expiresAt        DateTime?
+  refreshHash      String?      @unique
+  refreshExpiresAt DateTime?
+  clientId         String?
+  client           OAuthClient? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  @@index([personId])
+}
+
+// An app that registered to ask for OAuth connections (claude.ai registers itself).
+model OAuthClient {
+  id           String      @id @default(cuid())
+  name         String
+  redirectUris String[]
+  createdAt    DateTime    @default(now())
+  codes        OAuthCode[]
+  tokens       ApiToken[]
+}
+
+// A one-time code from pressing Allow, swapped for tokens within a few minutes.
+model OAuthCode {
+  id            String      @id @default(cuid())
+  codeHash      String      @unique
+  clientId      String
+  client        OAuthClient @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  personId      String
+  person        Person      @relation(fields: [personId], references: [id], onDelete: Cascade)
+  redirectUri   String
+  codeChallenge String
+  expiresAt     DateTime
+  createdAt     DateTime    @default(now())
+}
+
+model Phone {
+  id        String  @id @default(cuid())
+  personId  String
+  person    Person  @relation(fields: [personId], references: [id], onDelete: Cascade)
+  label     String  @default("Mobile")
+  number    String
+  isPrimary Boolean @default(false)
+
+  @@index([personId])
+}
+
+model Team {
+  id             String       @id @default(cuid())
+  // This row's id in Planning Center, when it was imported from there.
+  pcoId          String?
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  sortOrder      Int          @default(0)
+  createdAt      DateTime     @default(now())
+  positions      Position[]
+  leaders        TeamLeader[]
+
+  @@unique([organizationId, name])
+}
+
+model Position {
+  id        String           @id @default(cuid())
+  // This row's id in Planning Center, when it was imported from there.
+  pcoId          String?
+  teamId    String
+  team      Team             @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  name      String
+  sortOrder Int              @default(0)
+  people      PersonPosition[]
+  assignments Assignment[]
+  templatePositions TemplatePosition[]
+  planNeeds   PlanPosition[]
+
+  @@unique([teamId, name])
+}
+
+// A person is "on" a team when they hold at least one of its positions.
+model PersonPosition {
+  personId   String
+  person     Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  positionId String
+  position   Position @relation(fields: [positionId], references: [id], onDelete: Cascade)
+
+  @@id([personId, positionId])
+  @@index([positionId])
+}
+
+// Which teams a LEADER-role person may manage.
+model TeamLeader {
+  personId String
+  person   Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+  teamId   String
+  team     Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@id([personId, teamId])
+  @@index([teamId])
+}
+
+// Single-use links for invitations and password resets. Only the hash is stored.
+model AuthToken {
+  id        String    @id @default(cuid())
+  personId  String
+  person    Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
+  type      TokenType
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([personId])
+}
+
+// A recurring kind of service (Sunday Morning, Midweek, ...).
+model ServiceType {
+  id             String       @id @default(cuid())
+  // This row's id in Planning Center, when it was imported from there.
+  pcoId          String?
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  // "HH:MM" in the organization's timezone; pre-fills new plans.
+  defaultTime    String?
+  sortOrder      Int          @default(0)
+  plans          Plan[]
+  // The template: what a new plan of this type starts with.
+  templateItems     TemplateItem[]
+  templatePositions TemplatePosition[]
+  templateTimes     TemplateTime[]
+
+  @@unique([organizationId, name])
+}
+
+// One service on one date. The date and wall-clock time are stored separately
+// so they never shift with the server's or viewer's timezone.
+model Plan {
+  id             String       @id @default(cuid())
+  // This row's id in Planning Center, when it was imported from there.
+  pcoId          String?
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  serviceTypeId  String
+  serviceType    ServiceType  @relation(fields: [serviceTypeId], references: [id])
+  date           DateTime     @db.Date
+  startTime      String?
+  title          String?
+  notes          String?
+  // Test material, cleared in one go from the Account page (Sample data).
+  sample         Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  items          PlanItem[]
+  assignments    Assignment[]
+  times          PlanTime[]
+  needs          PlanPosition[]
+
+  @@index([organizationId, date])
+}
+
+model PlanItem {
+  id            String       @id @default(cuid())
+  planId        String
+  plan          Plan         @relation(fields: [planId], references: [id], onDelete: Cascade)
+  type          PlanItemType
+  position      Int
+  title         String
+  lengthSeconds Int?
+  // On a header: everything under it happens before the service starts, timed
+  // backwards so the last of it ends at the start time. Only headers set it.
+  preService    Boolean      @default(false)
+  // A song played as its tag in this plan only; the song itself is unchanged.
+  tag           Boolean      @default(false)
+  notes         String?
+  songId        String?
+  song          Song?        @relation(fields: [songId], references: [id], onDelete: SetNull)
+  arrangementId String?
+  arrangement   Arrangement? @relation(fields: [arrangementId], references: [id], onDelete: SetNull)
+  // Key for this service; starts as the arrangement's key.
+  key           String?
+
+  @@index([planId, position])
+}
+
+model Song {
+  id             String        @id @default(cuid())
+  // This row's id in Planning Center, when it was imported from there.
+  pcoId          String?
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  title          String
+  author         String?
+  // The song's number in CCLI's catalogue, for the usage report.
+  ccliNumber     String?
+  notes          String?
+  archived       Boolean       @default(false)
+  // Test material, cleared in one go from the Account page (Sample data).
+  sample         Boolean      @default(false)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  arrangements   Arrangement[]
+  attachments    Attachment[]
+  planItems      PlanItem[]
+
+  @@index([organizationId, title])
+}
+
+// A way of playing a song. Every song has at least one.
+model Arrangement {
+  id            String       @id @default(cuid())
+  // This row's id in Planning Center, when it was imported from there.
+  pcoId          String?
+  songId        String
+  song          Song         @relation(fields: [songId], references: [id], onDelete: Cascade)
+  name          String       @default("Default")
+  key           String?
+  bpm           Int?
+  meter         String?
+  lengthSeconds Int?
+  // Free text, e.g. "V1 C V2 C B C C".
+  sequence      String?
+  notes         String?
+  // Typed chord chart (chords over lyrics, ChordPro brackets, or Nashville
+  // numbers) and the key its letter chords are written in. See src/lib/chords.ts.
+  chart         String?
+  chartKey      String?
+  sortOrder     Int          @default(0)
+  attachments   Attachment[]
+  planItems     PlanItem[]
+
+  @@index([songId])
+}
+
+// A chart or recording uploaded to storage (FILE), or a web link such as a
+// YouTube video (LINK). Belongs to a song, optionally to one arrangement.
+model Attachment {
+  id             String         @id @default(cuid())
+  organizationId String
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  songId         String
+  song           Song           @relation(fields: [songId], references: [id], onDelete: Cascade)
+  arrangementId  String?
+  arrangement    Arrangement?   @relation(fields: [arrangementId], references: [id], onDelete: SetNull)
+  kind           AttachmentKind
+  name           String
+  url            String?
+  storageKey     String?
+  contentType    String?
+  size           Int?
+  // Which key this chart is written in, when it matters.
+  keyLabel       String?
+  createdAt      DateTime       @default(now())
+
+  @@index([songId])
+}
+
+// One person scheduled in one position on one plan.
+model Assignment {
+  id            String           @id @default(cuid())
+  planId        String
+  plan          Plan             @relation(fields: [planId], references: [id], onDelete: Cascade)
+  personId      String
+  person        Person           @relation(fields: [personId], references: [id], onDelete: Cascade)
+  positionId    String
+  position      Position         @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  status        AssignmentStatus @default(PENDING)
+  declineReason String?
+  // When the request email went out; null means they haven't been asked yet.
+  notifiedAt    DateTime?
+  respondedAt   DateTime?
+  // A nudge to answer, and a heads-up shortly before the service. Each is sent once.
+  reminderSentAt        DateTime?
+  serviceReminderSentAt DateTime?
+  // The auto-schedule that added this, so it can be undone. Null if added by hand.
+  autoRunId     String?
+  autoRun       AutoScheduleRun? @relation(fields: [autoRunId], references: [id], onDelete: SetNull)
+  createdAt     DateTime         @default(now())
+
+  @@unique([planId, personId, positionId])
+  @@index([personId])
+  @@index([autoRunId])
+}
+
+// One press of Auto-schedule. Undo takes its assignments back off, except anyone
+// already asked or answered.
+model AutoScheduleRun {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assignments    Assignment[]
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId])
+}
+
+// Dates a person can't serve. Both ends are included.
+model Blackout {
+  id        String   @id @default(cuid())
+  personId  String
+  person    Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  startDate DateTime @db.Date
+  endDate   DateTime @db.Date
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@index([personId, startDate])
+}
+
+// Two people auto-schedule puts on the same services: `always` won't schedule one
+// without the other (a parent and child), otherwise it just leans that way (people
+// who work well together). One row per pair, `personAId` the lower id.
+model ServingPartner {
+  personAId String
+  personA   Person  @relation("partnerA", fields: [personAId], references: [id], onDelete: Cascade)
+  personBId String
+  personB   Person  @relation("partnerB", fields: [personBId], references: [id], onDelete: Cascade)
+  always    Boolean @default(false)
+  createdAt DateTime @default(now())
+
+  @@id([personAId, personBId])
+  @@index([personBId])
+}
+
+// A row copied into every new plan of a service type. A SONG row is an empty
+// slot ("Song 1") that a real song is chosen for on the plan.
+model TemplateItem {
+  id            String       @id @default(cuid())
+  serviceTypeId String
+  serviceType   ServiceType  @relation(fields: [serviceTypeId], references: [id], onDelete: Cascade)
+  type          PlanItemType
+  position      Int
+  title         String
+  lengthSeconds Int?
+  // A Pre-service header, as on PlanItem.
+  preService    Boolean      @default(false)
+  // Copied to the plan row's notes.
+  notes         String?
+
+  @@index([serviceTypeId, position])
+}
+
+// How many people a service type needs in a position. Read live by its plans,
+// not copied, so changing it changes what every plan of the type asks for.
+model TemplatePosition {
+  id            String      @id @default(cuid())
+  serviceTypeId String
+  serviceType   ServiceType @relation(fields: [serviceTypeId], references: [id], onDelete: Cascade)
+  positionId    String
+  position      Position    @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  quantity      Int         @default(1)
+  // Nice to have: it doesn't count as unfilled, and auto-schedule fills it only if asked.
+  optional      Boolean     @default(false)
+
+  @@unique([serviceTypeId, positionId])
+}
+
+// One plan's own needs where they differ from its service type's: a position added,
+// or a different number, or 0 for one this service doesn't use. See `planNeeds`.
+model PlanPosition {
+  id         String   @id @default(cuid())
+  planId     String
+  plan       Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+  positionId String
+  position   Position @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  quantity   Int      @default(1)
+  optional   Boolean  @default(false)
+
+  @@unique([planId, positionId])
+}
+
+// A wrong password, kept briefly so sign-in can refuse someone guessing.
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  email     String
+  createdAt DateTime @default(now())
+
+  @@index([email, createdAt])
+}
+
+// A time on a plan other than the service itself: rehearsal, arrival, setup.
+// It has its own date, since a rehearsal can be earlier in the week.
+model PlanTime {
+  id     String   @id @default(cuid())
+  planId String
+  plan   Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+  label  String
+  // Both empty for a time that hasn't been decided yet ("Rehearsal: TBD").
+  date   DateTime? @db.Date
+  // "HH:MM", like Plan.startTime.
+  time   String?
+
+  @@index([planId])
+}
+
+// A time every new plan of a service type starts with, as a clock time some
+// number of days before the service (0 = the same day).
+model TemplateTime {
+  id            String      @id @default(cuid())
+  serviceTypeId String
+  serviceType   ServiceType @relation(fields: [serviceTypeId], references: [id], onDelete: Cascade)
+  label         String
+  // Empty when new plans should start with this time still to be decided.
+  time          String?
+  daysBefore    Int         @default(0)
+
+  @@index([serviceTypeId])
+}
